@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["ExpoVlcPlayerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.vlcplayer.ExpoVlcPlayerModule"]
+  }
+}

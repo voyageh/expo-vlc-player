@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-vlc-player": ["../src/index"],
+      "expo-vlc-player/*": ["../src/*"]
+    }
+  }
+}
