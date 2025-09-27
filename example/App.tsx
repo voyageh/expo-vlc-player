@@ -1,12 +1,16 @@
 import * as React from 'react'
 
-import { ExpoVlcPlayerView, ExpoVlcPlayerViewHandle } from 'expo-vlc-player'
-
-const DEFAULT_STREAM = 'rtsp://172.27.1.96:50001/live/0'
-const DEFAULT_OPTIONS = ['--network-caching=200', '--rtsp-tcp']
+import { ExpoVlcPlayerView } from 'expo-vlc-player'
 
 export default function App() {
-  return <ExpoVlcPlayerView style={styles.player} url={DEFAULT_STREAM} options={DEFAULT_OPTIONS} resizeMode="contain" />
+  return (
+    <ExpoVlcPlayerView
+      style={styles.player}
+      url="rtsp://172.27.1.96:50001/live/0"
+      options={['--network-caching=200', '--rtsp-tcp']}
+      resizeMode="contain"
+    />
+  )
 }
 
 const styles = {

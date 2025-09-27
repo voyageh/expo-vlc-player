@@ -1,5 +1,5 @@
 {
-  "name": "expo-vlc-player",
+  "name": "@wniu/expo-vlc-player",
   "version": "0.1.0",
   "description": "vlc player",
   "main": "build/index.js",
