@@ -468,7 +468,7 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
 
     fun attach(layout: VLCVideoLayout) {
       if (!attached) {
-        mediaPlayer.attachViews(layout, null, false, false)
+        mediaPlayer.attachViews(layout, null, false, true)
         attached = true
       }
       if (playWhenAttached) {
