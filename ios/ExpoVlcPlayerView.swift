@@ -155,6 +155,14 @@ final class ExpoVlcPlayerView: ExpoView {
     lifecycleObservers.append(contentsOf: [didEnterBackground, willEnterForeground, didBecomeActive])
   }
 
+  private func performOnMain(_ block: @escaping () -> Void) {
+    if Thread.isMainThread {
+      block()
+    } else {
+      DispatchQueue.main.async(execute: block)
+    }
+  }
+
   private func removeLifecycleObservers() {
     let center = NotificationCenter.default
     for observer in lifecycleObservers {
@@ -183,17 +191,18 @@ final class ExpoVlcPlayerView: ExpoView {
 
   private func loadMedia(url: URL, autoPlay: Bool) {
     // 确保在主线程操作UI
-    DispatchQueue.main.async {
+    performOnMain { [weak self] in
+      guard let self else { return }
       self.cancelResumeVerification()
       self.resumeAttemptID = self.resumeAttemptID &+ 1
       let attemptID = self.resumeAttemptID
 
       // 清理现有播放器
-      if let player = self.mediaPlayer {
-        if player.isPlaying {
-          player.stop()
-        }
-      } else {
+      if let player = self.mediaPlayer, player.isPlaying {
+        player.stop()
+      }
+
+      if self.mediaPlayer == nil {
         self.mediaPlayer = self.createMediaPlayer()
       }
 
@@ -236,19 +245,26 @@ final class ExpoVlcPlayerView: ExpoView {
     hasLoadDispatched = false
     cancelResumeVerification()
 
-    DispatchQueue.main.async {
-      self.mediaPlayer?.stop()
-      self.mediaPlayer?.media = nil
+    performOnMain { [weak self] in
+      guard let self else { return }
+      guard let player = self.mediaPlayer else { return }
+      player.drawable = nil
+      player.stop()
+      player.media = nil
     }
   }
 
   private func recreatePlayer() {
     guard let url = currentURL else { return }
 
-    DispatchQueue.main.async {
+    performOnMain { [weak self] in
+      guard let self else { return }
       // 清理当前播放器
-      self.mediaPlayer?.stop()
-      self.mediaPlayer?.delegate = nil
+      if let player = self.mediaPlayer {
+        player.drawable = nil
+        player.stop()
+        player.delegate = nil
+      }
       self.mediaPlayer = nil
 
       // 重新创建
@@ -486,11 +502,23 @@ final class ExpoVlcPlayerView: ExpoView {
     cancelResumeVerification()
     removeLifecycleObservers()
 
-    DispatchQueue.main.async {
-      self.mediaPlayer?.stop()
-      self.mediaPlayer?.delegate = nil
-      self.mediaPlayer?.drawable = nil
-      self.mediaPlayer = nil
+    if Thread.isMainThread {
+      if let player = mediaPlayer {
+        player.drawable = nil
+        player.stop()
+        player.delegate = nil
+      }
+      mediaPlayer = nil
+    } else {
+      DispatchQueue.main.sync { [weak self] in
+        guard let self else { return }
+        if let player = self.mediaPlayer {
+          player.drawable = nil
+          player.stop()
+          player.delegate = nil
+        }
+        self.mediaPlayer = nil
+      }
     }
 
     currentURL = nil
