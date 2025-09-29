@@ -3,14 +3,14 @@ import QuartzCore
 import UIKit
 import VLCKit
 
-private let defaultMediaOptions: [String] = [
-  ":network-caching=200"
+private let defaultInitOptions: [String] = [
+  "--rtsp-tcp"
 ]
 
-private enum OptionCategory: String {
-  case player
-  case media
-}
+private let defaultMediaOptions: [String] = [
+  ":network-caching=200",
+  ":rtsp-caching=200"
+]
 
 final class ExpoVlcPlayerView: ExpoView {
   private let videoView = VLCPlayerDrawableView()
@@ -21,8 +21,8 @@ final class ExpoVlcPlayerView: ExpoView {
 
   private var mediaPlayer: VLCMediaPlayer?
   private var currentURL: URL?
-  private var playerOptions: [String] = []
-  private var mediaOptions: [String] = []
+  private var initOptions: [String] = defaultInitOptions
+  private var mediaOptions: [String] = defaultMediaOptions
   private var shouldPlayWhenReady = true
   private var hasLoadDispatched = false
   private var desiredAspectRatio: String?
@@ -36,9 +36,6 @@ final class ExpoVlcPlayerView: ExpoView {
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
-    let normalized = normalizeOptions(nil)
-    playerOptions = normalized.player
-    mediaOptions = normalized.media
     setupView()
     registerLifecycleObservers()
   }
@@ -70,14 +67,26 @@ final class ExpoVlcPlayerView: ExpoView {
     loadMedia(url: parsedURL, autoPlay: shouldPlayWhenReady)
   }
 
-  func setOptions(_ options: [String]?) {
+  func setInitOptions(_ options: [String]?) {
     guard !isDestroyed else { return }
 
-    let normalized = normalizeOptions(options)
-    guard normalized.player != playerOptions || normalized.media != mediaOptions else { return }
+    let resolved = options ?? defaultInitOptions
+    guard resolved != initOptions else { return }
 
-    playerOptions = normalized.player
-    mediaOptions = normalized.media
+    initOptions = resolved
+
+    if currentURL != nil {
+      recreatePlayer()
+    }
+  }
+
+  func setMediaOptions(_ options: [String]?) {
+    guard !isDestroyed else { return }
+
+    let resolved = options ?? defaultMediaOptions
+    guard resolved != mediaOptions else { return }
+
+    mediaOptions = resolved
 
     if currentURL != nil {
       recreatePlayer()
@@ -172,7 +181,7 @@ final class ExpoVlcPlayerView: ExpoView {
   }
 
   private func createMediaPlayer() -> VLCMediaPlayer {
-    let options = playerOptions
+    let options = initOptions
 
     let player: VLCMediaPlayer
     if options.isEmpty {
@@ -298,102 +307,6 @@ final class ExpoVlcPlayerView: ExpoView {
       case .original:
         self.videoView.contentMode = .center
       }
-    }
-  }
-
-  private func normalizeOptions(_ options: [String]?) -> (player: [String], media: [String]) {
-    var player: [String] = []
-    var media: [String] = []
-    var playerSeen: [String: Int] = [:]
-    var mediaSeen: [String: Int] = [:]
-
-    func appendOption(_ rawValue: String, category: OptionCategory) {
-      let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !trimmed.isEmpty else { return }
-
-      let prefixed = ExpoVlcPlayerView.ensureOptionPrefix(trimmed, category: category)
-      let key = ExpoVlcPlayerView.canonicalOptionKey(prefixed, category: category)
-
-      switch category {
-      case .player:
-        if let existingIndex = playerSeen[key] {
-          player[existingIndex] = prefixed
-        } else {
-          player.append(prefixed)
-          playerSeen[key] = player.count - 1
-        }
-
-      case .media:
-        if let existingIndex = mediaSeen[key] {
-          media[existingIndex] = prefixed
-        } else {
-          media.append(prefixed)
-          mediaSeen[key] = media.count - 1
-        }
-      }
-    }
-
-    for option in defaultMediaOptions {
-      appendOption(option, category: .media)
-    }
-
-    if let options, !options.isEmpty {
-      for option in options {
-        let trimmed = option.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { continue }
-
-        if trimmed.hasPrefix(":") {
-          appendOption(trimmed, category: .media)
-        } else {
-          appendOption(trimmed, category: .player)
-        }
-      }
-    }
-
-    return (player, media)
-  }
-
-  private static func canonicalOptionKey(_ option: String, category: OptionCategory) -> String {
-    let trimmed = option.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    var startIndex = trimmed.startIndex
-    while startIndex < trimmed.endIndex && (trimmed[startIndex] == "-" || trimmed[startIndex] == ":") {
-      startIndex = trimmed.index(after: startIndex)
-    }
-
-    let withoutPrefix = trimmed[startIndex...]
-
-    let baseKey: String
-    if let equalsIndex = withoutPrefix.firstIndex(of: "=") {
-      baseKey = String(withoutPrefix[..<equalsIndex]).lowercased()
-    } else {
-      baseKey = String(withoutPrefix).lowercased()
-    }
-
-    return "\(category.rawValue)|\(baseKey)"
-  }
-
-  private static func ensureOptionPrefix(_ option: String, category: OptionCategory) -> String {
-    switch category {
-    case .player:
-      if option.hasPrefix("--") || option.hasPrefix("-") {
-        return option
-      }
-      if option.hasPrefix(":") {
-        let withoutColon = option.dropFirst()
-        return "--\(withoutColon)"
-      }
-      return "--\(option)"
-
-    case .media:
-      if option.hasPrefix(":") {
-        return option
-      }
-      if option.hasPrefix("--") || option.hasPrefix("-") {
-        let withoutHyphen = option.drop(while: { $0 == "-" })
-        return ":\(withoutHyphen)"
-      }
-      return ":\(option)"
     }
   }
 

@@ -29,7 +29,8 @@ export default function App() {
       <ExpoVlcPlayerView
         style={styles.player}
         url="rtsp://172.27.1.96:50001/live/0"
-        options={["--network-caching=200", "--rtsp-tcp"]}
+        initOptions={["--rtsp-tcp"]}
+        mediaOptions={[":network-caching=200", ":rtsp-caching=200"]}
         resizeMode="contain"
         paused={false}
         videoAspectRatio="16:9"
@@ -61,7 +62,8 @@ const styles = StyleSheet.create({
 |-------------------|-------------------------------------|-----------------------------------------------------------------------------|
 | `url`             | `string`                            | The video stream URL (RTSP, HTTP, etc.).                                    |
 | `paused`          | `boolean`                           | Whether playback is paused. Default: `false`.                               |
-| `options`         | `string[]`                          | VLC options (e.g., `["--network-caching=200", "--rtsp-tcp"]`).              |
+| `initOptions`     | `string[]`                          | LibVLC initialization options (defaults to `["--rtsp-tcp"]`).                |
+| `mediaOptions`    | `string[]`                          | Media-level options (defaults to `[":network-caching=200", ":rtsp-caching=200"]`). |
 | `videoAspectRatio`| `string`                            | Aspect ratio for the video (e.g., `"16:9"`, `"4:3"`).                       |
 | `resizeMode`      | `'contain' \| 'cover' \| 'stretch' \| 'fill' \| 'original'` | How the video should be scaled inside the player.                           |
 | `onLoad`          | `(event: { nativeEvent: VlcPlayerEventPayload }) => void` | Callback when the video is loaded.                                          |
@@ -71,7 +73,8 @@ const styles = StyleSheet.create({
 
 ## Example Options
 
-- `--network-caching=200` → Reduces network buffer for faster response.  
+- `:network-caching=200` → Reduces media buffer for faster response.  
+- `:rtsp-caching=200` → Keeps RTSP demux buffer aligned with network cache.  
 - `--rtsp-tcp` → Forces RTSP over TCP instead of UDP.  
 
 ## License

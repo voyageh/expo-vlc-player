@@ -67,7 +67,8 @@ npm run open:android
 Main component props include:
 - `url`: Stream URL (RTSP, HTTP, etc.)
 - `paused`: Playback state control
-- `options`: VLC player options array (automatically normalized across platforms)
+- `initOptions`: LibVLC initialization options (defaults documented in README)
+- `mediaOptions`: Media-level options for caching and tuning
 - `videoAspectRatio`: Video aspect ratio setting
 - `resizeMode`: Video resize behavior (`contain`, `cover`, `stretch`, `fill`, `original`)
 - Event callbacks: `onLoad`, `onPlaying`, `onError`
@@ -81,5 +82,5 @@ Ref methods:
 - **Video Surface**: Custom `CAEAGLLayer`-based view for hardware acceleration
 - **Thread Safety**: All VLC operations properly managed on main thread
 - **Resource Management**: Automatic cleanup of VLC resources on view destruction
-- **Options Normalization**: VLC options automatically prefixed and deduplicated
+- **Default Options**: Provides baseline init/media options while allowing direct overrides
 - **State Management**: Proper handling of app lifecycle and view attachment states

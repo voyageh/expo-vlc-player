@@ -12,7 +12,8 @@ export type VlcPlayerErrorPayload = {
 export type ExpoVlcPlayerViewProps = {
   url?: string;
   paused?: boolean;
-  options?: string[];
+  initOptions?: string[];
+  mediaOptions?: string[];
   videoAspectRatio?: string;
   resizeMode?: 'contain' | 'cover' | 'stretch' | 'fill' | 'original';
   onLoad?: (event: { nativeEvent: VlcPlayerEventPayload }) => void;

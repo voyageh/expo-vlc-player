@@ -17,9 +17,15 @@ public final class ExpoVlcPlayerModule: Module {
         }
       }
 
-      Prop("options") { (view: ExpoVlcPlayerView, options: [String]?) in
+      Prop("initOptions") { (view: ExpoVlcPlayerView, options: [String]?) in
         DispatchQueue.main.async {
-          view.setOptions(options)
+          view.setInitOptions(options)
+        }
+      }
+
+      Prop("mediaOptions") { (view: ExpoVlcPlayerView, options: [String]?) in
+        DispatchQueue.main.async {
+          view.setMediaOptions(options)
         }
       }
 

@@ -21,8 +21,12 @@ class ExpoVlcPlayerModule : Module() {
         }
       }
 
-      Prop("options") { view: ExpoVlcPlayerView, options: List<String>? ->
-        view.setOptions(options)
+      Prop("initOptions") { view: ExpoVlcPlayerView, options: List<String>? ->
+        view.setInitOptions(options)
+      }
+
+      Prop("mediaOptions") { view: ExpoVlcPlayerView, options: List<String>? ->
+        view.setMediaOptions(options)
       }
 
       Prop("videoAspectRatio") { view: ExpoVlcPlayerView, aspectRatio: String? ->

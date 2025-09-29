@@ -16,15 +16,10 @@ const ExpoVlcPlayerView = React.forwardRef<
   ExpoVlcPlayerViewHandle,
   ExpoVlcPlayerViewProps
 >(function ExpoVlcPlayerView(
-  { resizeMode = 'contain', options, paused, ...rest },
+  { resizeMode = 'contain', initOptions, mediaOptions, paused, ...rest },
   ref,
 ) {
   const nativeRef = React.useRef<React.ComponentRef<typeof NativeView>>(null);
-
-  const filteredOptions = React.useMemo(
-    () => options?.map((value) => value.trim()).filter((value) => value.length > 0),
-    [options],
-  );
 
   const nativeProps: ExpoVlcPlayerViewProps = {
     resizeMode,
@@ -32,8 +27,12 @@ const ExpoVlcPlayerView = React.forwardRef<
     ...rest,
   };
 
-  if (filteredOptions && filteredOptions.length > 0) {
-    nativeProps.options = filteredOptions;
+  if (initOptions && initOptions.length > 0) {
+    nativeProps.initOptions = initOptions;
+  }
+
+  if (mediaOptions && mediaOptions.length > 0) {
+    nativeProps.mediaOptions = mediaOptions;
   }
 
   React.useImperativeHandle(

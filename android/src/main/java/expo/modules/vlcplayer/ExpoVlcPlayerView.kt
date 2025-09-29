@@ -25,7 +25,7 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
   private var playerSession: PlayerSession? = null
   private var currentUri: Uri? = null
 
-  private var desiredLibOptions: List<String> = DEFAULT_LIBVLC_OPTIONS
+  private var desiredInitOptions: List<String> = DEFAULT_INIT_OPTIONS
   private var desiredMediaOptions: List<String> = DEFAULT_MEDIA_OPTIONS
   private var desiredAspectRatio: String? = null
   private var desiredResizeMode: ResizeMode = ResizeMode.CONTAIN
@@ -62,16 +62,27 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
     ensureSession().prepare(uri, autoPlay = shouldPlayWhenReady)
   }
 
-  fun setOptions(options: List<String>?) {
+  fun setInitOptions(options: List<String>?) {
     if (released) return
 
-    val normalized = normalizeOptions(options)
-    if (normalized.first == desiredLibOptions && normalized.second == desiredMediaOptions) {
+    val resolved = options?.toList() ?: DEFAULT_INIT_OPTIONS
+    if (resolved == desiredInitOptions) {
       return
     }
 
-    desiredLibOptions = normalized.first
-    desiredMediaOptions = normalized.second
+    desiredInitOptions = resolved
+    rebuildSession(autoReplay = shouldPlayWhenReady)
+  }
+
+  fun setMediaOptions(options: List<String>?) {
+    if (released) return
+
+    val resolved = options?.toList() ?: DEFAULT_MEDIA_OPTIONS
+    if (resolved == desiredMediaOptions) {
+      return
+    }
+
+    desiredMediaOptions = resolved
     rebuildSession(autoReplay = shouldPlayWhenReady)
   }
 
@@ -197,12 +208,12 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
     val session = playerSession
     val targetUri = currentUri
 
-    if (session != null && session.matches(desiredLibOptions, desiredMediaOptions)) {
+    if (session != null && session.matches(desiredInitOptions, desiredMediaOptions)) {
       return session
     }
 
     playerSession?.release()
-    val newSession = PlayerSession(context, desiredLibOptions, desiredMediaOptions)
+    val newSession = PlayerSession(context, desiredInitOptions, desiredMediaOptions)
     newSession.applyAspectRatio(desiredAspectRatio)
     newSession.applyResizeMode(desiredResizeMode)
     if (attachedToWindow) {
@@ -225,89 +236,6 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
 
   private fun elapsedSinceBackground(): Long =
     lastBackgroundAt?.let { SystemClock.elapsedRealtime() - it } ?: 0L
-
-  private fun normalizeOptions(options: List<String>?): Pair<List<String>, List<String>> {
-    val libOptions = LinkedHashMap<String, String>()
-    val mediaOptions = LinkedHashMap<String, String>()
-
-    fun addLib(raw: String) {
-      val prefixed = ensureLibOptionPrefix(raw)
-      libOptions[canonicalOptionKey(prefixed)] = prefixed
-    }
-
-    fun addMedia(raw: String) {
-      val prefixed = ensureMediaOptionPrefix(raw)
-      mediaOptions[canonicalOptionKey(prefixed)] = prefixed
-    }
-
-    DEFAULT_LIBVLC_OPTIONS.forEach { addLib(it) }
-    DEFAULT_MEDIA_OPTIONS.forEach { addMedia(it) }
-
-    options?.forEach { raw ->
-      val trimmed = raw.trim()
-      if (trimmed.isEmpty()) return@forEach
-
-      when {
-        trimmed.startsWith(":") -> addMedia(trimmed)
-        trimmed.startsWith("--") || trimmed.startsWith("-") -> addLib(trimmed)
-        trimmed.contains("=") -> addLib(trimmed)
-        else -> addLib(trimmed)
-      }
-    }
-
-    return libOptions.values.toList() to mediaOptions.values.toList()
-  }
-
-  private fun canonicalOptionKey(option: String): String {
-    var start = 0
-    while (start < option.length && (option[start] == '-' || option[start] == ':')) {
-      start += 1
-    }
-
-    val withoutPrefix = option.substring(start)
-    val equalsIndex = withoutPrefix.indexOf('=')
-    val key = if (equalsIndex >= 0) {
-      withoutPrefix.substring(0, equalsIndex)
-    } else {
-      withoutPrefix
-    }
-
-    return key.lowercase()
-  }
-
-  private fun ensureLibOptionPrefix(option: String): String {
-    if (option.startsWith("--")) {
-      return option
-    }
-    if (option.startsWith("-")) {
-      val without = option.trimStart('-')
-      return "--$without"
-    }
-    if (option.startsWith(":")) {
-      val withoutColon = option.substring(1)
-      return "--$withoutColon"
-    }
-    return if (option.contains("=")) {
-      "--$option"
-    } else {
-      "--$option"
-    }
-  }
-
-  private fun ensureMediaOptionPrefix(option: String): String {
-    if (option.startsWith(":")) {
-      return option
-    }
-    if (option.startsWith("--") || option.startsWith("-")) {
-      val withoutHyphen = option.trimStart('-')
-      return ":$withoutHyphen"
-    }
-    return if (option.contains("=")) {
-      ":$option"
-    } else {
-      ":$option"
-    }
-  }
 
   private fun scheduleResumeVerification() {
     val uri = currentUri ?: return
@@ -358,10 +286,10 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
 
   private inner class PlayerSession(
     context: Context,
-    private val libOptions: List<String>,
+    private val initOptions: List<String>,
     private val mediaOptions: List<String>,
   ) {
-    private val libVlc = LibVLC(context.applicationContext, ArrayList(libOptions))
+    private val libVlc = LibVLC(context.applicationContext, ArrayList(initOptions))
     private val mediaPlayer = MediaPlayer(libVlc)
 
     private var attached = false
@@ -498,8 +426,8 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
 
     fun hasVideoOutput(): Boolean = mediaPlayer.videoTracks.isNotEmpty()
 
-    fun matches(lib: List<String>, media: List<String>): Boolean =
-      libOptions == lib && mediaOptions == media
+    fun matches(init: List<String>, media: List<String>): Boolean =
+      initOptions == init && mediaOptions == media
 
     fun release() {
       stop()
@@ -537,9 +465,12 @@ class ExpoVlcPlayerView(context: Context, appContext: AppContext) : ExpoView(con
   }
 
   private companion object {
-    private val DEFAULT_LIBVLC_OPTIONS = emptyList<String>()
+    private val DEFAULT_INIT_OPTIONS = listOf(
+      "--rtsp-tcp"
+    )
     private val DEFAULT_MEDIA_OPTIONS = listOf(
-      ":network-caching=200"
+      ":network-caching=200",
+      ":rtsp-caching=200"
     )
 
     private const val RELOAD_THRESHOLD_MS = 2_000L
