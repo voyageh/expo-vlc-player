@@ -43,6 +43,6 @@ android {
 }
 
 dependencies {
-  implementation 'org.videolan.android:libvlc-all:3.6.3'
+  implementation 'org.videolan.android:libvlc-all:3.6.4'
   implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
 }
